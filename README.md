@@ -6,6 +6,21 @@
 
 插件是标准的 DSH bundle（Host 半边 + Web Client 半边），装法与其它插件一致，走插件管理器即可。
 
+## 仓库
+
+两处同源，保持同步：
+
+- GitHub：<https://github.com/blooming-fang/dsh-my-workbench>
+- Gitee（镜像）：<https://gitee.com/fang-wensheng/dsh-my-workbench>
+
+本仓库配了两个远程源（`origin` → GitHub，`gitee` → Gitee），并带一个 `git pushall` 别名，
+一次推两处：
+
+```
+git pushall      # 等价于 git push origin main && git push gitee main
+```
+
+
 ## 三个模块
 
 | 标签页 | 显示什么 | 数据来源 |
