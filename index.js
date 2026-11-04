@@ -16,6 +16,7 @@
  * stays active in a Host composition that does not mount one of them.
  */
 
+import { readdir, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -322,12 +323,45 @@ function skillsRoot() {
   return join(homedir(), '.agents', 'skills');
 }
 
-/** Test one skill location against the library folder. */
+/** Test one skill location against one library prefix. */
 function isInsideRoot(location, root) {
   if (typeof location !== 'string' || location === '') return false;
   const normalized = location.replace(/\\/g, '/').toLowerCase();
   const normalizedRoot = root.replace(/\\/g, '/').toLowerCase().replace(/\/+$/, '');
   return normalized === normalizedRoot || normalized.startsWith(`${normalizedRoot}/`);
+}
+
+/**
+ * Every path a skill may legitimately report for living in the library.
+ *
+ * A skill installed as a link — a junction into a package directory, for
+ * instance — is found through its link but *reported* at its real location, so
+ * both the folder path and the resolved target of each entry count.
+ */
+async function libraryPrefixes(root) {
+  const prefixes = [root];
+  try {
+    prefixes.push(await realpath(root));
+  } catch (error) {
+    // An unresolvable root simply keeps the folder path alone.
+  }
+  let entries;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    return prefixes;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+    const full = join(root, entry.name);
+    prefixes.push(full);
+    try {
+      prefixes.push(await realpath(full));
+    } catch (error) {
+      // A dangling link contributes only its own path.
+    }
+  }
+  return prefixes;
 }
 
 /** One skill library folder, optionally narrowed by a case-insensitive query. */
@@ -371,7 +405,11 @@ async function listSkills(ctx, query, cwd) {
   // Only this one folder is the workbench's skill library. Everything else -
   // bundled packs, package folders, project workspaces - is out of scope.
   const library = skillsRoot();
-  const external = items.filter((skill) => isInsideRoot(skill.path !== '' ? skill.path : skill.resourceBase, library));
+  const prefixes = await libraryPrefixes(library);
+  const external = items.filter((skill) => {
+    const location = skill.path !== '' ? skill.path : skill.resourceBase;
+    return prefixes.some((prefix) => isInsideRoot(location, prefix));
+  });
   const hiddenBundled = items.length - external.length;
   const filtered = needle === ''
     ? external
