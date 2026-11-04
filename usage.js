@@ -27,7 +27,7 @@ const SESSION_FILE = /^session(?:\.v(\d+))?\.jsonl(\.zstd)?$/;
 const DAY_MS = 86_400_000;
 const YIELD_EVERY_LINES = 20_000;
 const MAX_PROBLEMS = 4;
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 const DAY_FIELDS = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'messages'];
 
@@ -70,6 +70,32 @@ function positive(value) {
 /** One empty day bucket. */
 function emptyDay() {
   return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, messages: 0 };
+}
+
+/** Add one provider usage report into a bucket. */
+function addUsage(bucket, usage) {
+  bucket.input += positive(usage.inputTokens);
+  bucket.output += positive(usage.outputTokens);
+  bucket.cacheRead += positive(usage.cacheReadTokens);
+  bucket.cacheWrite += positive(usage.cacheWriteTokens);
+  bucket.reasoning += positive(usage.reasoningTokens);
+  bucket.messages += 1;
+}
+
+/**
+ * Identity of the model that produced one message: `provider/model`.
+ *
+ * Reported as the message's own source, so a session that switched models (or a
+ * subagent on a different one) is accounted to the model that actually ran.
+ */
+function modelKeyOf(message) {
+  const source = message === null || typeof message !== 'object' ? undefined : message.source;
+  const provider = source !== undefined && source !== null && typeof source.provider === 'string' ? source.provider : '';
+  const model = source !== undefined && source !== null && typeof source.model === 'string' ? source.model : '';
+  if (provider === '' && model === '') return 'unknown/unknown';
+  if (provider === '') return `unknown/${model}`;
+  if (model === '') return `${provider}/unknown`;
+  return `${provider}/${model}`;
 }
 
 /**
@@ -197,10 +223,12 @@ async function readLogText(log) {
 }
 
 /**
- * Fold one log into per-day totals.
+ * Fold one log into per-day totals, split by the model that produced each one.
  *
  * Only lines that can carry a usage report are parsed: a session log is mostly
  * stream chunks, and matching the event name first keeps a 100 MB log cheap.
+ * Each counted message also names its provider and model in
+ * `data.message.source`, which is what makes a per-model view possible.
  */
 async function foldLog(log, cutoffMs) {
   const text = await readLogText(log);
@@ -228,14 +256,19 @@ async function foldLog(log, cutoffMs) {
     const time = typeof event.time === 'number' ? event.time : undefined;
     if (time === undefined || time < cutoffMs) continue;
     const key = dayKey(time);
-    const day = days.get(key) ?? emptyDay();
-    day.input += positive(usage.inputTokens);
-    day.output += positive(usage.outputTokens);
-    day.cacheRead += positive(usage.cacheReadTokens);
-    day.cacheWrite += positive(usage.cacheWriteTokens);
-    day.reasoning += positive(usage.reasoningTokens);
-    day.messages += 1;
-    days.set(key, day);
+    let day = days.get(key);
+    if (day === undefined) {
+      day = { ...emptyDay(), models: {} };
+      days.set(key, day);
+    }
+    addUsage(day, usage);
+    const modelKey = modelKeyOf(event.data.message);
+    let bucket = day.models[modelKey];
+    if (bucket === undefined) {
+      bucket = emptyDay();
+      day.models[modelKey] = bucket;
+    }
+    addUsage(bucket, usage);
   }
   return days;
 }
@@ -290,9 +323,10 @@ function totalsOf(bucket) {
  *
  * @param days - window length in days, today included.
  * @param budgetMs - how long one call may spend folding uncached logs.
- * @returns per-day totals, window totals, and what is still pending.
+ * @param model - `provider/model` to report alone; empty reports every model.
+ * @returns per-day totals, window totals, the model roster, and what is pending.
  */
-export async function summarizeUsage({ days = 7, budgetMs = 4000 } = {}) {
+export async function summarizeUsage({ days = 7, budgetMs = 4000, model = '' } = {}) {
   const problems = [];
   const windowDays = clampDays(days);
   const todayStart = startOfDay(Date.now());
@@ -341,6 +375,9 @@ export async function summarizeUsage({ days = 7, budgetMs = 4000 } = {}) {
   }
   if (folded > 0) await writeCache(cache);
 
+  const wanted = typeof model === 'string' ? model.trim() : '';
+  const modelBuckets = new Map();
+  const modelSessions = new Map();
   const buckets = new Map();
   const daySessions = new Map();
   const windowSessions = new Set();
@@ -349,8 +386,20 @@ export async function summarizeUsage({ days = 7, budgetMs = 4000 } = {}) {
     if (record === undefined) continue;
     for (const [date, day] of Object.entries(record.days)) {
       if (date < fromDate || date > todayDate) continue;
+      // The roster is always built over every model in the window so the Client
+      // can offer a full picker, even while one model is being reported alone.
+      for (const [key, modelDay] of Object.entries(day.models === undefined ? {} : day.models)) {
+        const rosterBucket = modelBuckets.get(key) ?? emptyDay();
+        for (const field of DAY_FIELDS) rosterBucket[field] += positive(modelDay[field]);
+        modelBuckets.set(key, rosterBucket);
+        const modelSet = modelSessions.get(key) ?? new Set();
+        modelSet.add(log.session);
+        modelSessions.set(key, modelSet);
+      }
+      const source = wanted === '' ? day : day.models === undefined ? undefined : day.models[wanted];
+      if (source === undefined) continue;
       const bucket = buckets.get(date) ?? emptyDay();
-      for (const field of DAY_FIELDS) bucket[field] += positive(day[field]);
+      for (const field of DAY_FIELDS) bucket[field] += positive(source[field]);
       buckets.set(date, bucket);
       windowSessions.add(log.session);
       const sessions = daySessions.get(date) ?? new Set();
@@ -374,8 +423,26 @@ export async function summarizeUsage({ days = 7, budgetMs = 4000 } = {}) {
   const promptTokens = totals.input + totals.cacheRead;
   const today = byDay[byDay.length - 1];
 
+  const models = [...modelBuckets.entries()]
+    .map(([id, bucket]) => {
+      const prompt = bucket.input + bucket.cacheRead;
+      const slash = id.indexOf('/');
+      return {
+        id,
+        provider: slash < 0 ? id : id.slice(0, slash),
+        model: slash < 0 ? '' : id.slice(slash + 1),
+        ...bucket,
+        ...totalsOf(bucket),
+        hitRate: prompt > 0 ? bucket.cacheRead / prompt : 0,
+        sessions: (modelSessions.get(id) ?? new Set()).size,
+      };
+    })
+    .sort((left, right) => right.totalWithCache - left.totalWithCache);
+
   return {
     range: { days: windowDays, from: fromDate, to: todayDate },
+    model: wanted,
+    models,
     days: byDay,
     today,
     totals: {

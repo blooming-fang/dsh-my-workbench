@@ -531,7 +531,10 @@ function apply(ctx) {
       respond(res, () => {
         const url = new URL(req.url ?? '/', 'http://localhost');
         const days = Number(url.searchParams.get('days') ?? '7');
-        return summarizeUsage({ days: Number.isFinite(days) ? days : 7 });
+        return summarizeUsage({
+          days: Number.isFinite(days) ? days : 7,
+          model: url.searchParams.get('model') ?? '',
+        });
       });
     },
   }), 'my-workbench: usage route');

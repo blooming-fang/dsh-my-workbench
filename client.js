@@ -92,6 +92,10 @@ window.__ModuleLoader__.load({
       'usage.pendingFiles': '剩余日志',
       'usage.window': '近 {{n}} 天',
       'usage.note': '口径：输入只计未命中缓存的提示 token，缓存读单列；合计 = 输入 + 输出 + 推理；含缓存合计 = 合计 + 缓存读 + 缓存写；会话数按当天有记录的会话去重。',
+      'usage.model': '按模型筛选',
+      'usage.modelHint': '只统计该模型的请求',
+      'usage.allModels': '全部模型',
+      'usage.empty': '这个区间没有记录到用量。',
       'usage.limit': '统计来自本地会话日志，仅统计本机保存的会话。',
     };
 
@@ -174,6 +178,10 @@ window.__ModuleLoader__.load({
       'usage.pendingFiles': 'logs left',
       'usage.window': 'Last {{n}} days',
       'usage.note': 'Counting: input excludes cache hits, which are reported separately; total = input + output + reasoning; with-cache total adds cache reads and writes back; sessions are deduplicated per day.',
+      'usage.model': 'Filter by model',
+      'usage.modelHint': 'Count only requests made with this model',
+      'usage.allModels': 'All models',
+      'usage.empty': 'No usage was recorded in this window.',
       'usage.limit': 'Figures come from local session logs, so only sessions kept on this machine are counted.',
     };
 
@@ -225,6 +233,7 @@ window.__ModuleLoader__.load({
       '.wb-spacer{flex:1 1 auto}',
       '.wb-input{min-height:34px;min-width:220px;padding:0 12px;border-radius:9px;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface);color:inherit;font:inherit;font-size:13px}',
       '.wb-input:focus{outline:1px solid var(--dsw-alias-brand-primary);outline-offset:-1px}',
+      '.wb-select{min-width:170px;max-width:260px;padding:0 8px}',
       '.wb-cwd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.wb-btn{appearance:none;font:inherit;font-size:13px;padding:7px 14px;border-radius:9px;cursor:pointer;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface);color:var(--dsw-alias-label-primary)}',
       '.wb-btn:hover{border-color:var(--dsw-alias-border-l2)}',
@@ -677,6 +686,9 @@ window.__ModuleLoader__.load({
       var rangeHook = useState(7);
       var range = rangeHook[0];
       var setRange = rangeHook[1];
+      var modelHook = useState('');
+      var model = modelHook[0];
+      var setModel = modelHook[1];
       var stateHook = useState({ phase: 'loading' });
       var state = stateHook[0];
       var setState = stateHook[1];
@@ -684,12 +696,13 @@ window.__ModuleLoader__.load({
 
       var load = useCallback(async function () {
         try {
-          var data = await api('/usage?days=' + String(range));
+          var query = '/usage?days=' + String(range) + (model === '' ? '' : '&model=' + encodeURIComponent(model));
+          var data = await api(query);
           setState({ phase: 'ready', data: data });
         } catch (error) {
           setState({ phase: 'error', error: messageOf(error) });
         }
-      }, [range]);
+      }, [range, model]);
 
       useEffect(function () {
         attempts.current = 0;
@@ -698,7 +711,16 @@ window.__ModuleLoader__.load({
       }, [load]);
 
       var data = state.phase === 'ready' ? state.data : null;
+      var models = data !== null && data.models !== undefined ? data.models : [];
       var pending = data !== null && data.scan !== undefined ? data.scan.pending : 0;
+
+      // A model that produced nothing in this window drops out of the roster;
+      // fall back to the unfiltered view instead of showing an empty panel.
+      useEffect(function () {
+        if (data === null || model === '') return;
+        var known = models.some(function (entry) { return entry.id === model; });
+        if (!known) setModel('');
+      }, [data, model, models]);
 
       // A long window is folded in bounded slices; keep asking until it is done.
       useEffect(function () {
@@ -710,6 +732,12 @@ window.__ModuleLoader__.load({
 
       var rangeLabel = function (days) { return t('usage.window').replace('{{n}}', String(days)); };
 
+      // Same model name can come from two providers, so those options carry it.
+      var nameUse = {};
+      models.forEach(function (entry) {
+        nameUse[entry.model] = (nameUse[entry.model] || 0) + 1;
+      });
+
       var bar = h('div', { className: 'wb-bar', key: 'bar' },
         h('div', { className: 'wb-range' }, USAGE_RANGES.map(function (days) {
           return h('button', {
@@ -720,6 +748,18 @@ window.__ModuleLoader__.load({
             onClick: function () { setRange(days); },
           }, rangeLabel(days));
         })),
+        models.length > 1
+          ? h('select', {
+            className: 'wb-input wb-select',
+            value: model,
+            'aria-label': t('usage.model'),
+            title: t('usage.modelHint'),
+            onChange: function (event) { setModel(event.target.value); },
+          }, [h('option', { key: '', value: '' }, t('usage.allModels'))].concat(models.map(function (entry) {
+            var label = nameUse[entry.model] > 1 ? entry.model + ' (' + entry.provider + ')' : entry.model;
+            return h('option', { key: entry.id, value: entry.id, title: entry.id }, label);
+          })))
+          : null,
         h('span', { className: 'wb-spacer' }),
         h('button', {
           type: 'button',
@@ -802,7 +842,7 @@ window.__ModuleLoader__.load({
           h('p', { className: 'wb-note is-error' }, t('usage.loadFailed') + '：' + state.error),
           h('button', { type: 'button', className: 'wb-btn', onClick: function () { load(); } }, t('common.retry')));
       } else if (data !== null && pending <= 0 && (data.totals.messages || 0) === 0) {
-        body = h('div', { className: 'wb-empty', key: 'empty' }, t('skills.none'));
+        body = h('div', { className: 'wb-empty', key: 'empty' }, t('usage.empty'));
       }
 
       return h('div', { className: 'wb-body' },
