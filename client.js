@@ -90,6 +90,10 @@ window.__ModuleLoader__.load({
       'fav.repaired': '已重新装好',
       'fav.failed': '安装失败',
       'fav.installAll': '全部安装',
+      'fav.remove': '移出',
+      'fav.removing': '移出中…',
+      'fav.removed': '已移出 {{name}}，以后同步不会再收回来',
+      'fav.excluded': '另有 {{n}} 个已排除，同步时跳过：{{names}}',
       'fav.installingAll': '正在安装…',
       'fav.allDone': '全部安装结束：成功 {{ok}} 个，失败 {{bad}} 个',
       'fav.stateInstalled': '已安装',
@@ -178,6 +182,10 @@ window.__ModuleLoader__.load({
       'fav.repaired': 'Reinstalled over the unreadable copy',
       'fav.failed': 'Install failed',
       'fav.installAll': 'Install all',
+      'fav.remove': 'Remove',
+      'fav.removing': 'Removing…',
+      'fav.removed': '{{name}} removed — Sync skips it from now on',
+      'fav.excluded': '{{n}} skipped by Sync: {{names}}',
       'fav.installingAll': 'Installing…',
       'fav.allDone': 'Install all finished: {{ok}} installed, {{bad}} failed',
       'fav.stateInstalled': 'Installed',
@@ -686,6 +694,7 @@ window.__ModuleLoader__.load({
             capturedAt: data.capturedAt || '',
             filePath: data.filePath || '',
             pending: typeof data.pending === 'number' ? data.pending : 0,
+            excluded: data.excluded || [],
             problems: data.problems || [],
           });
         } catch (error) {
@@ -701,6 +710,20 @@ window.__ModuleLoader__.load({
         try {
           var data = await api('/favorites', { method: 'POST', body: JSON.stringify({ action: 'capture' }) });
           setNotice({ tone: 'success', text: fill(t('fav.captured'), { n: data.count }) });
+          await load();
+        } catch (error) {
+          setNotice({ tone: 'error', text: messageOf(error) });
+        } finally {
+          setBusy('');
+        }
+      }, [load, t]);
+
+      var remove = useCallback(async function (plugin) {
+        setBusy('#remove:' + plugin.name);
+        setNotice(null);
+        try {
+          var data = await api('/favorites', { method: 'POST', body: JSON.stringify({ action: 'remove', name: plugin.name }) });
+          setNotice({ tone: 'success', text: fill(t('fav.removed'), { name: data.name }) });
           await load();
         } catch (error) {
           setNotice({ tone: 'error', text: messageOf(error) });
@@ -827,6 +850,13 @@ window.__ModuleLoader__.load({
             h('div', { className: 'wb-side' },
               h('button', {
                 type: 'button',
+                className: 'wb-btn',
+                disabled: busy !== '',
+                title: t('fav.remove'),
+                onClick: function () { remove(plugin); },
+              }, busy === '#remove:' + plugin.name ? t('fav.removing') : t('fav.remove')),
+              h('button', {
+                type: 'button',
                 className: 'wb-btn' + (ready ? '' : ' wb-primary'),
                 disabled: busy !== '' || ready,
                 title: plugin.installSpec,
@@ -846,6 +876,10 @@ window.__ModuleLoader__.load({
           }))
           : null,
         body,
+        state.phase === 'ready' && (state.excluded || []).length > 0
+          ? h('p', { className: 'wb-note', key: 'excluded' },
+            fill(t('fav.excluded'), { n: state.excluded.length, names: state.excluded.join(', ') }))
+          : null,
         state.phase === 'ready' && state.filePath !== ''
           ? h('p', { className: 'wb-note wb-cwd', key: 'file', title: state.filePath }, t('fav.file') + '：' + state.filePath)
           : null,

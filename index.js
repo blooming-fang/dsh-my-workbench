@@ -615,13 +615,33 @@ async function readFavourites() {
     const plugins = (Array.isArray(parsed?.plugins) ? parsed.plugins : [])
       .map(normaliseFavourite)
       .filter((entry) => entry !== undefined);
+    const excluded = (Array.isArray(parsed?.exclude) ? parsed.exclude : [])
+      .filter((name) => typeof name === 'string')
+      .map((name) => name.trim())
+      .filter((name) => name !== '');
     return {
-      snapshot: { capturedAt: typeof parsed?.capturedAt === 'string' ? parsed.capturedAt : '', plugins },
+      snapshot: {
+        capturedAt: typeof parsed?.capturedAt === 'string' ? parsed.capturedAt : '',
+        plugins,
+        excluded,
+      },
       problem: '',
     };
   } catch (error) {
     return { snapshot: null, problem: `favorites.json is not valid JSON: ${messageOf(error)}` };
   }
+}
+
+/** Write the snapshot back, keeping the exclusion list in file order. */
+async function writeFavourites(plugins, excluded) {
+  const snapshot = {
+    version: 1,
+    capturedAt: new Date().toISOString(),
+    plugins: plugins.map((entry) => ({ name: entry.name, title: entry.title, description: entry.description })),
+    ...excluded.length === 0 ? {} : { exclude: excluded },
+  };
+  await writeFile(FAVORITES_FILE, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+  return snapshot;
 }
 
 /**
@@ -640,15 +660,31 @@ async function captureFavourites(ctx) {
     throw new Error(problems.length > 0 ? problems.join(' ') : 'This profile reports no plugin bundles.');
   }
   const own = await ownPackageName();
+  const { snapshot: stored } = await readFavourites();
+  const excluded = stored?.excluded ?? [];
   const plugins = bundles
     .filter((bundle) => bundle?.enabled === true)
     .filter((bundle) => bundle?.availability !== 'installation')
     .map((bundle) => favouriteOf(bundle))
-    .filter((entry) => entry.name !== '' && entry.name !== own);
+    .filter((entry) => entry.name !== '' && entry.name !== own && !excluded.includes(entry.name));
   plugins.sort((left, right) => left.name.localeCompare(right.name));
-  const snapshot = { version: 1, capturedAt: new Date().toISOString(), plugins };
-  await writeFile(FAVORITES_FILE, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
-  return snapshot;
+  return await writeFavourites(plugins, excluded);
+}
+
+/**
+ * Take one plugin out of the pin, and keep it out.
+ *
+ * Removing the row alone would last only until the next Sync, which re-reads
+ * what the profile runs; the name therefore also joins the exclusion list that
+ * Sync consults. Editing the file by hand remains the way back in.
+ */
+async function removeFavourite(ctx, name) {
+  const { snapshot } = await readFavourites();
+  const plugins = (snapshot?.plugins ?? []).filter((entry) => entry.name !== name);
+  const excluded = snapshot?.excluded ?? [];
+  if (!excluded.includes(name)) excluded.push(name);
+  const written = await writeFavourites(plugins, excluded);
+  return { status: 'removed', name, count: written.plugins.length, capturedAt: written.capturedAt };
 }
 
 /**
@@ -679,6 +715,7 @@ async function listFavourites(ctx) {
   });
   return {
     capturedAt: snapshot?.capturedAt ?? '',
+    excluded: snapshot?.excluded ?? [],
     filePath: fileURLToPath(FAVORITES_FILE),
     plugins,
     pending: plugins.filter((plugin) => plugin.action !== 'installed').length,
@@ -755,6 +792,11 @@ async function actOnFavourites(ctx, body) {
   if (action === 'capture') {
     const snapshot = await captureFavourites(ctx);
     return { status: 'captured', capturedAt: snapshot.capturedAt, count: snapshot.plugins.length, plugins: snapshot.plugins.map((entry) => entry.name) };
+  }
+  if (action === 'remove') {
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+    if (name === '') throw new Error('name is required');
+    return await removeFavourite(ctx, name);
   }
   if (action === 'install-all') return { status: 'installed-all', ...(await installAllFavourites(ctx)) };
   if (action === 'install') {

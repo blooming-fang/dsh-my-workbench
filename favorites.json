@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "capturedAt": "2026-11-11T04:09:33.847Z",
+  "capturedAt": "2026-11-11T04:14:25.358Z",
   "plugins": [
     {
       "name": "dsh-context",
@@ -23,11 +23,6 @@
       "description": "DSH 图片捕获、保存与画廊插件；新增独立 Images API 生图和编辑工具，保留聊天模型并支持本地转发服务。"
     },
     {
-      "name": "dsh-superagent",
-      "title": "Superagent",
-      "description": "监听单个 GitHub 仓库，把获授权的请求转为 Ticket，并在各自的 DSH 会话中执行。"
-    },
-    {
       "name": "dsh-tavily-web-search",
       "title": "dsh-tavily-web-search",
       "description": "Tavily-backed WebSearchProvider with a pool-only multi-key settings UI, round-robin search, and official per-key usage inspection."
@@ -47,5 +42,8 @@
       "title": "插件市场",
       "description": "逛一逛，点一下，装好。"
     }
+  ],
+  "exclude": [
+    "dsh-superagent"
   ]
 }
