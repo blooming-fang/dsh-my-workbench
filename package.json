@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "My Workbench: a left-sidebar workspace for MCP servers, skills, and daily token usage.",
+  "description": "My Workbench: a left-sidebar workspace for favourite plugins, MCP servers, and skills.",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -11,8 +11,8 @@
     "./icon": "./icon.svg"
   },
   "files": [
+    "favorites.json",
     "index.js",
-    "usage.js",
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",

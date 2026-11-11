@@ -10,17 +10,18 @@
  *   - `mcp`    reads the configured MCP server rows from the live Loader patch
  *              layer and flips their enablement through `pluginManager`.
  *   - `skills` lists one skill library folder and one skill's full body.
- *   - `usage`  folds daily token totals out of the session logs (`usage.js`).
+ *   - `favorites` pins the plugins this profile runs into `favorites.json`
+ *              beside this file, and installs them back through `pluginManager`
+ *              so a new machine needs nothing but this workbench.
  *
  * Every service besides `webServer` is read through `ctx.get()` so this plugin
  * stays active in a Host composition that does not mount one of them.
  */
 
-import { readdir, realpath } from 'node:fs/promises';
+import { readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-
-import { summarizeUsage } from './usage.js';
+import { fileURLToPath } from 'node:url';
 
 const API_PREFIX = '/api/my-workbench';
 const MCP_MODULE = '@deepseek-ai/dsh-mcp-client';
@@ -457,6 +458,316 @@ async function readSkill(ctx, name, cwd) {
   };
 }
 
+/**
+ * Read the profile's bundle list once, with the manager that produced it.
+ *
+ * `listBundles` answers one row per bundle this profile can manage — the shipped
+ * ones, the on-demand catalog, and every third-party package the profile depends
+ * on — each carrying its enablement, whether its files can be read, and the spec
+ * `pnpm add` would take. A missing service is reported instead of thrown so the
+ * panel can still render its other modules.
+ *
+ * @param ctx - plugin context used to reach `pluginManager`.
+ */
+async function readBundles(ctx) {
+  const manager = ctx.get('pluginManager');
+  if (manager === undefined || typeof manager.listBundles !== 'function') {
+    return {
+      manager: undefined,
+      bundles: [],
+      problems: ['The pluginManager service is not available, so external plugins cannot be listed.'],
+    };
+  }
+  try {
+    const bundles = await manager.listBundles();
+    return { manager, bundles: Array.isArray(bundles) ? bundles : [], problems: [] };
+  } catch (error) {
+    return { manager, bundles: [], problems: [`Reading the plugin bundles failed: ${messageOf(error)}`] };
+  }
+}
+
+/**
+ * Text for a localised display value: a plain string, or the best of the
+ * translations a package manifest may carry (Chinese first, then English, then
+ * whichever language it happens to declare first).
+ */
+function displayText(value) {
+  if (typeof value === 'string') return value.trim();
+  if (value === null || typeof value !== 'object') return '';
+  for (const language of ['zh', 'en']) {
+    const chosen = value[language];
+    if (typeof chosen === 'string' && chosen.trim() !== '') return chosen.trim();
+  }
+  for (const language of Object.keys(value)) {
+    const chosen = value[language];
+    if (typeof chosen === 'string' && chosen.trim() !== '') return chosen.trim();
+  }
+  return '';
+}
+
+/** The parts of a Plugin Manager change result the panel reports. */
+function changeOf(result) {
+  const value = result ?? {};
+  return {
+    application: typeof value.application === 'string' ? value.application : '',
+    restartReason: typeof value.restartReason === 'string' ? value.restartReason : '',
+    changed: value.changed === true,
+    enabled: value.enabled === true,
+    code: typeof value.error?.code === 'string' ? value.error.code : '',
+    diagnostic: typeof value.error?.diagnostic === 'string' ? value.error.diagnostic : '',
+  };
+}
+
+/** Failure codes the Plugin Manager may answer with, in the order they are looked for. */
+const FAILURE_CODES = [
+  'already-installed',
+  'not-removable',
+  'bundle-in-use',
+  'incompatible-version',
+  'unsupported-platform',
+  'invalid-spec',
+  'not-bundle',
+  'stale-approval',
+  'stop-profile',
+  'ambiguous-install',
+  'management-required',
+  'unaddressable',
+  'unknown-plugin',
+  'operation-error',
+];
+
+/** The Plugin Manager's failure code for a thrown value, when it carries one. */
+function failureCodeOf(error) {
+  const seen = [error?.code, error?.data?.code, error?.details?.code, error?.cause?.code]
+    .filter((candidate) => typeof candidate === 'string' && candidate !== '');
+  for (const candidate of seen) {
+    for (const code of FAILURE_CODES) {
+      if (candidate === code || candidate.endsWith(`/${code}`)) return code;
+    }
+  }
+  const text = messageOf(error);
+  for (const code of FAILURE_CODES) {
+    if (text.includes(code)) return code;
+  }
+  return '';
+}
+
+/**
+ * The favourites file: the pins this plugin carries with it.
+ *
+ * The list is a snapshot, not a live query — it is written once by **Sync** and
+ * then read verbatim, so a new machine that installs nothing but this workbench
+ * still sees the same set of plugins. It lives next to `index.js` inside the
+ * package, which is what makes it travel: the package is installed from git or
+ * from a folder, so the file ships with the code.
+ */
+const FAVORITES_FILE = new URL('./favorites.json', import.meta.url);
+
+/** This plugin's own package name, so a snapshot never pins the workbench itself. */
+async function ownPackageName() {
+  try {
+    const manifest = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
+    return typeof manifest?.name === 'string' ? manifest.name : '';
+  } catch (error) {
+    return '';
+  }
+}
+
+/**
+ * One snapshot row from a live bundle.
+ *
+ * A row is a package name plus the words that describe it — no version and no
+ * install path. Installing a favourite means `pnpm add <name>`, so every pinned
+ * plugin comes back at whatever the registry publishes as latest; pinning would
+ * only make a new machine drag an old copy along.
+ */
+function favouriteOf(bundle) {
+  return {
+    name: String(bundle?.name ?? ''),
+    title: displayText(bundle?.meta?.title),
+    description: displayText(bundle?.meta?.description)
+      || (typeof bundle?.description === 'string' ? bundle.description.trim() : ''),
+  };
+}
+
+/** One stored row; anything but a package name is dropped. */
+function normaliseFavourite(raw) {
+  const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
+  if (name === '') return undefined;
+  return {
+    name,
+    title: typeof raw?.title === 'string' ? raw.title : '',
+    description: typeof raw?.description === 'string' ? raw.description : '',
+  };
+}
+
+/** The stored snapshot, or null when nothing was pinned yet. */
+async function readFavourites() {
+  let raw;
+  try {
+    raw = await readFile(FAVORITES_FILE, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { snapshot: null, problem: '' };
+    return { snapshot: null, problem: `Reading favorites.json failed: ${messageOf(error)}` };
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    const plugins = (Array.isArray(parsed?.plugins) ? parsed.plugins : [])
+      .map(normaliseFavourite)
+      .filter((entry) => entry !== undefined);
+    return {
+      snapshot: { capturedAt: typeof parsed?.capturedAt === 'string' ? parsed.capturedAt : '', plugins },
+      problem: '',
+    };
+  } catch (error) {
+    return { snapshot: null, problem: `favorites.json is not valid JSON: ${messageOf(error)}` };
+  }
+}
+
+/**
+ * Pin the plugins this profile runs right now.
+ *
+ * Everything switched on in the profile manifest is captured except the rows
+ * the DSH installation itself supplies — those arrive with any fresh Harness and
+ * are not something a new machine has to install — and except this workbench,
+ * which is the thing doing the installing.
+ *
+ * @param ctx - plugin context used to reach `pluginManager`.
+ */
+async function captureFavourites(ctx) {
+  const { bundles, problems } = await readBundles(ctx);
+  if (bundles.length === 0) {
+    throw new Error(problems.length > 0 ? problems.join(' ') : 'This profile reports no plugin bundles.');
+  }
+  const own = await ownPackageName();
+  const plugins = bundles
+    .filter((bundle) => bundle?.enabled === true)
+    .filter((bundle) => bundle?.availability !== 'installation')
+    .map((bundle) => favouriteOf(bundle))
+    .filter((entry) => entry.name !== '' && entry.name !== own);
+  plugins.sort((left, right) => left.name.localeCompare(right.name));
+  const snapshot = { version: 1, capturedAt: new Date().toISOString(), plugins };
+  await writeFile(FAVORITES_FILE, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+  return snapshot;
+}
+
+/**
+ * The pinned list, each row told what this profile already has.
+ *
+ * @param ctx - plugin context used to reach `pluginManager`.
+ */
+async function listFavourites(ctx) {
+  const { snapshot, problem } = await readFavourites();
+  const { bundles, problems } = await readBundles(ctx);
+  const live = new Map(bundles.map((bundle) => [String(bundle?.name ?? ''), bundle]));
+  const plugins = (snapshot?.plugins ?? []).map((entry) => {
+    const bundle = live.get(entry.name);
+    const installed = bundle?.installed === true;
+    const availability = typeof bundle?.availability === 'string' ? bundle?.availability : '';
+    const ready = installed && availability !== 'missing';
+    return {
+      name: entry.name,
+      title: entry.title,
+      description: entry.description,
+      installSpec: entry.name,
+      installed,
+      enabled: bundle?.enabled === true,
+      availability,
+      currentVersion: typeof bundle?.version === 'string' ? bundle.version : '',
+      action: ready ? 'installed' : 'install',
+    };
+  });
+  return {
+    capturedAt: snapshot?.capturedAt ?? '',
+    filePath: fileURLToPath(FAVORITES_FILE),
+    plugins,
+    pending: plugins.filter((plugin) => plugin.action !== 'installed').length,
+    problems: [...problems, ...(problem === '' ? [] : [problem])],
+  };
+}
+
+/**
+ * Install one pinned plugin from the spec a new machine can use.
+ *
+ * A dependency the profile already declares cannot be installed a second time,
+ * which the manager reports as `already-installed`; that answer is passed back
+ * as a result rather than an error, because asking to install something that is
+ * installed is a reasonable thing to do. A declared package whose files can no
+ * longer be read is removed first so the source installs it afresh — the same
+ * order the manager's own update flow takes.
+ *
+ * @param ctx - plugin context used to reach `pluginManager`.
+ * @param entry - one pinned row.
+ */
+async function installFavourite(ctx, entry) {
+  const { manager, bundles } = await readBundles(ctx);
+  if (manager === undefined || typeof manager.installBundle !== 'function') {
+    throw new Error('The pluginManager service is not available, so nothing can be installed.');
+  }
+  const spec = entry.name;
+  let repaired = false;
+  const bundle = bundles.find((candidate) => String(candidate?.name ?? '') === entry.name);
+  if (bundle?.installed === true && bundle?.availability === 'missing') {
+    if (bundle?.removable !== true || typeof manager.removeBundle !== 'function') {
+      throw new Error(`"${entry.name}" has unreadable files that this profile cannot remove, so it cannot be installed again.`);
+    }
+    const removal = changeOf(await manager.removeBundle(entry.name));
+    if (removal.code !== '') {
+      const detail = removal.diagnostic === '' ? '' : ` · ${removal.diagnostic}`;
+      throw new Error(`Removing the unreadable copy of "${entry.name}" failed: ${removal.code}${detail}`);
+    }
+    repaired = true;
+  }
+  let change;
+  try {
+    change = changeOf(await manager.installBundle(spec, { enabled: true }));
+  } catch (error) {
+    if (failureCodeOf(error) === 'already-installed') {
+      return { status: 'already-installed', name: entry.name, spec, repaired, change: changeOf(null) };
+    }
+    throw new Error(`Installing ${entry.name} (latest) failed: ${messageOf(error)}`);
+  }
+  if (change.code === 'already-installed') return { status: 'already-installed', name: entry.name, spec, repaired, change };
+  if (change.code !== '') return { status: 'failed', name: entry.name, spec, repaired, change };
+  return { status: 'installed', name: entry.name, spec, repaired, change };
+}
+
+/** Install every pinned plugin this profile is missing, one after another. */
+async function installAllFavourites(ctx) {
+  const { plugins } = await listFavourites(ctx);
+  const results = [];
+  for (const plugin of plugins) {
+    if (plugin.action === 'installed') continue;
+    try {
+      const result = await installFavourite(ctx, plugin);
+      results.push({ ok: result.status !== 'failed', name: plugin.name, status: result.status, spec: result.spec, detail: result.change?.diagnostic ?? '' });
+    } catch (error) {
+      results.push({ ok: false, name: plugin.name, status: 'failed', spec: plugin.installSpec, detail: messageOf(error) });
+    }
+  }
+  const failed = results.filter((result) => result.ok !== true).length;
+  return { results, installed: results.length - failed, failed };
+}
+
+/** One write on the favourites route: pin the current plugins, or install one or all of them. */
+async function actOnFavourites(ctx, body) {
+  const action = typeof body?.action === 'string' && body.action !== '' ? body.action : 'install';
+  if (action === 'capture') {
+    const snapshot = await captureFavourites(ctx);
+    return { status: 'captured', capturedAt: snapshot.capturedAt, count: snapshot.plugins.length, plugins: snapshot.plugins.map((entry) => entry.name) };
+  }
+  if (action === 'install-all') return { status: 'installed-all', ...(await installAllFavourites(ctx)) };
+  if (action === 'install') {
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+    if (name === '') throw new Error('name is required');
+    const { snapshot } = await readFavourites();
+    const entry = (snapshot?.plugins ?? []).find((candidate) => candidate.name === name);
+    if (entry === undefined) throw new Error(`"${name}" is not in the favourites list. Run Sync first.`);
+    return await installFavourite(ctx, entry);
+  }
+  throw new Error(`Unknown favourites action: ${action}`);
+}
+
 /** Run one route body and answer with a JSON envelope either way. */
 async function respond(res, job) {
   try {
@@ -521,23 +832,20 @@ function apply(ctx) {
 
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
-    path: `${API_PREFIX}/usage`,
+    path: `${API_PREFIX}/favorites`,
     handler: (req, res) => {
-      if (req.method !== 'GET') {
-        res.writeHead(405, { allow: 'GET' });
-        res.end();
+      if (req.method === 'POST') {
+        respond(res, async () => actOnFavourites(ctx, await readBody(req)));
         return;
       }
-      respond(res, () => {
-        const url = new URL(req.url ?? '/', 'http://localhost');
-        const days = Number(url.searchParams.get('days') ?? '7');
-        return summarizeUsage({
-          days: Number.isFinite(days) ? days : 7,
-          model: url.searchParams.get('model') ?? '',
-        });
-      });
+      if (req.method === 'GET') {
+        respond(res, () => listFavourites(ctx));
+        return;
+      }
+      res.writeHead(405, { allow: 'GET, POST' });
+      res.end();
     },
-  }), 'my-workbench: usage route');
+  }), 'my-workbench: favorites route');
 }
 
 export { apply, inject };

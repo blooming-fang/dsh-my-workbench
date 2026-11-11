@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "My Workbench",
-    "description": "A left-sidebar workbench for MCP servers, the skills in one chosen folder, and daily token usage, built to host more workbench modules later."
+    "description": "A left-sidebar workbench: install the external plugins this profile runs with one click, manage MCP servers, and read the skills in one chosen folder — built to host more modules later."
   }
 }

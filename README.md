@@ -1,8 +1,8 @@
 # dsh-my-workbench（我的工作台）
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的左侧栏工作台插件：
-在左侧栏加一个入口，点开是一块管理面板，把「用了多少 token」「连了哪些 MCP」「有哪些技能」
-集中在一处查看。
+在左侧栏加一个入口，点开是一块管理面板，把「固定在用的插件」「连了哪些 MCP」「有哪些技能」
+集中在一处查看。换电脑时只装这一个插件，收藏里的插件可以一键装回来。
 
 插件是标准的 DSH bundle（Host 半边 + Web Client 半边），装法与其它插件一致，走插件管理器即可。
 
@@ -25,11 +25,34 @@ git pushall      # 等价于 git push origin main && git push gitee main
 
 | 标签页 | 显示什么 | 数据来源 |
 |---|---|---|
-| **用量**（默认） | 近 7 / 30 / 90 天按天统计的 token：未命中缓存的输入、输出、缓存读、推理，两个区间合计（不含缓存 / 含缓存）、缓存命中率、消息数、会话数，以及按天明细表；可按模型筛选 | `$DSH_HOME/sessions` 下的 `session.v*.jsonl.zstd` 会话日志 |
+| **收藏**（默认） | 固定下来的一份插件清单：包名、标题、说明、当前装的版本，每行一个「安装」，顶上两个按钮「同步当前插件」「全部安装」 | 插件目录的 `favorites.json`（同步时用 `pluginManager.listBundles()` 采集） |
 | **MCP 服务** | 配置里的每一条 `dsh-mcp-client`：传输方式、启动命令或 URL、工具数、当前连接状态，并带一个开关可直接启用/停用该行 | `pluginManager` 服务 + Loader 补丁层 |
 | **技能** | 只列 `~/.agents/skills` 这一个目录下的技能，支持搜索、来源标记、查看完整 `SKILL.md` | `skills` 服务（按默认 Agent 预设的作用域读取） |
 
 想加新模块：Host 侧在 `index.js` 加一条路由，客户端在 `client.js` 的 `MODULES` 表里加一项即可。
+
+## 收藏是一份快照，不是一次查询
+
+列表就是插件目录里的 `favorites.json`，**点「同步当前插件」写一次，之后原样读**——所以它随插件本身走：
+
+- 换电脑时只装这一个工作台，收藏列表就跟着代码回来了；
+- 点「全部安装」，缺哪个装哪个，一次补齐；
+- 平时改了插件，再点一次同步覆盖即可（旧的会被替换，这是「固定」的意思）。
+
+**收录什么**：当前 profile 里已启用（`dsh.profile.bundles` 选中）的插件，去掉两类——
+DSH 安装自带的 bundle（新机器上本来就有，不用再装），以及工作台自己。
+
+**每条记什么**：只有**包名**，加上标题和说明。**不记版本、不记路径。**
+
+安装就是 `pnpm add <包名>`，一律取 registry 上的**最新版本**——钉版本只会让新电脑拖回一份旧的。
+
+**点「安装」的三种结果**：
+
+| 情况 | 行为 |
+|---|---|
+| 已经装好 | 插件管理器回 `already-installed`，面板当成正常结果提示「已安装，无需重复安装」 |
+| 依赖还在但文件读不到（`availability: missing`） | 先 `removeBundle()` 再按包名重装，成功时提示「已重新装好」 |
+| 失败 | 红色提示，带 pnpm 给出的原因 |
 
 ## 安装
 
@@ -40,18 +63,10 @@ plugin_manager action=install_bundle target=<本目录绝对路径>
 ```
 
 插件自带的 `cordis.patch.yml` 会插入 `my-workbench` 这一行，profile 不需要再单独写补丁。
-以目录链接方式安装时，改完源码把插件「关 → 开」一下就会加载新代码。
+以目录链接方式安装时，改完源码把插件「关 → 开」一下（或重启 Harness）就会加载新代码。
 
-## 统计口径
+## 几处细节
 
-- 用量里的「输入」只计**未命中缓存**的提示 token，缓存读单独一列（与
-  `@deepseek-ai/dsh-token-meter` 的口径一致：`inputTokens` 不含 cache read）。
-  `合计 = 输入 + 输出 + 推理`；`含缓存合计 = 合计 + 缓存读 + 缓存写`。
-- 会话日志是一串**独立 flush 的 zstd 帧**拼接而成，部分运行时单次解码只读第一帧
-  （表现为只有会话头、用量全 0），所以 `usage.js` 按帧魔数切分、逐帧解码后再拼接。
-- 用量数据取自本地会话日志，按文件修改时间 + 大小做增量缓存，落在
-  `$DSH_HOME/state/my-workbench/usage-cache.json`（纯派生数据，删掉只是重算一次）。
-  首次查看长区间会分批折叠并显示「正在扫描历史会话日志…」，扫完即秒开。
 - 技能目录里的条目可能是 junction / 软链接（例如 ego lite 把 `ego-browser` 链接进来）。
   这类技能被发现时走链接，但上报的路径是解析后的真实位置，因此判定时会把每个目录项的
   realpath 一起纳入前缀比较，链接安装的技能同样会显示。
@@ -60,8 +75,8 @@ plugin_manager action=install_bundle target=<本目录绝对路径>
 
 ```
 index.js          Host 半边：/api/my-workbench 下的各条路由
-usage.js          会话日志扫描、按帧解码 zstd、按天（及按模型）折叠、增量缓存
 client.js         客户端半边：左侧栏入口、面板、三个模块
+favorites.json    收藏快照：当前在用的插件清单，随插件一起走
 cordis.patch.yml  bundle 补丁行
 locale/           插件管理页显示的标题与描述
 icon.svg          插件图标

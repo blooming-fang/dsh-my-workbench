@@ -16,10 +16,10 @@ window.__ModuleLoader__.load({
     var ZH = {
       'panel.label': '我的工作台',
       'page.title': '我的工作台',
-      'page.subtitle': '在一处查看 Harness 的 MCP 服务、技能与每日 token 用量。',
+      'page.subtitle': '在一处查看 Harness 的外置插件、MCP 服务与技能。',
       'tab.mcp': 'MCP 服务',
       'tab.skills': '技能',
-      'tab.usage': '用量',
+      'tab.favorites': '收藏',
       'common.refresh': '刷新',
       'common.retry': '重试',
       'common.loading': '正在载入…',
@@ -75,37 +75,39 @@ window.__ModuleLoader__.load({
       'source.runtime': '运行时',
       'source.bundled': '内置',
       'source.custom': '自定义',
-      'usage.range': '区间合计',
-      'usage.today': '今日',
-      'usage.input': '输入',
-      'usage.output': '输出',
-      'usage.cacheRead': '缓存读',
-      'usage.reasoning': '推理',
-      'usage.messages': '消息',
-      'usage.sessions': '会话',
-      'usage.date': '日期',
-      'usage.total': '合计',
-      'usage.totalIncl': '含缓存合计',
-      'usage.hitRate': '缓存命中率',
-      'usage.loadFailed': '读取用量失败',
-      'usage.scanning': '正在扫描历史会话日志',
-      'usage.pendingFiles': '剩余日志',
-      'usage.window': '近 {{n}} 天',
-      'usage.note': '口径：输入只计未命中缓存的提示 token，缓存读单列；合计 = 输入 + 输出 + 推理；含缓存合计 = 合计 + 缓存读 + 缓存写；会话数按当天有记录的会话去重。',
-      'usage.model': '按模型筛选',
-      'usage.modelHint': '只统计该模型的请求',
-      'usage.allModels': '全部模型',
-      'usage.empty': '这个区间没有记录到用量。',
-      'usage.limit': '统计来自本地会话日志，仅统计本机保存的会话。',
+      'fav.search': '按名称或说明筛选',
+      'fav.summary': '个插件',
+      'fav.loadFailed': '读取收藏失败',
+      'fav.none': '收藏还是空的。点「同步当前插件」，把当前已启用的插件固定成这份收藏。',
+      'fav.capture': '同步当前插件',
+      'fav.capturing': '正在同步…',
+      'fav.captured': '已收藏 {{n}} 个插件',
+      'fav.captureHint': '「同步」把当前 profile 里已启用的插件（不含 DSH 自带的行）写进插件目录的 favorites.json。收藏只记包名，安装时一律取 registry 上的最新版本；换电脑时只需安装这个工作台，收藏就跟着回来，再一键装齐。',
+      'fav.install': '安装',
+      'fav.installing': '安装中…',
+      'fav.installed': '安装完成',
+      'fav.alreadyInstalled': '已安装，无需重复安装',
+      'fav.repaired': '已重新装好',
+      'fav.failed': '安装失败',
+      'fav.installAll': '全部安装',
+      'fav.installingAll': '正在安装…',
+      'fav.allDone': '全部安装结束：成功 {{ok}} 个，失败 {{bad}} 个',
+      'fav.stateInstalled': '已安装',
+      'fav.stateMissing': '文件缺失',
+      'fav.stateAbsent': '未安装',
+      'fav.source': '安装源',
+      'fav.capturedAt': '收藏于 {{at}}',
+      'fav.file': '文件',
+      'fav.pending': '待装 {{n}} 个',
     };
 
     var EN = {
       'panel.label': 'My Workbench',
       'page.title': 'My Workbench',
-      'page.subtitle': 'This Harness’s MCP servers, skills, and daily token usage in one place.',
+      'page.subtitle': 'This Harness’s external plugins, MCP servers, and skills in one place.',
       'tab.mcp': 'MCP servers',
       'tab.skills': 'Skills',
-      'tab.usage': 'Usage',
+      'tab.favorites': 'Favorites',
       'common.refresh': 'Refresh',
       'common.retry': 'Retry',
       'common.loading': 'Loading…',
@@ -161,28 +163,30 @@ window.__ModuleLoader__.load({
       'source.runtime': 'Runtime',
       'source.bundled': 'Bundled',
       'source.custom': 'Custom',
-      'usage.range': 'Range total',
-      'usage.today': 'Today',
-      'usage.input': 'Input',
-      'usage.output': 'Output',
-      'usage.cacheRead': 'Cache read',
-      'usage.reasoning': 'Reasoning',
-      'usage.messages': 'Messages',
-      'usage.sessions': 'Sessions',
-      'usage.date': 'Date',
-      'usage.total': 'Total',
-      'usage.totalIncl': 'With cache',
-      'usage.hitRate': 'Cache hit rate',
-      'usage.loadFailed': 'Reading usage failed',
-      'usage.scanning': 'Scanning session logs',
-      'usage.pendingFiles': 'logs left',
-      'usage.window': 'Last {{n}} days',
-      'usage.note': 'Counting: input excludes cache hits, which are reported separately; total = input + output + reasoning; with-cache total adds cache reads and writes back; sessions are deduplicated per day.',
-      'usage.model': 'Filter by model',
-      'usage.modelHint': 'Count only requests made with this model',
-      'usage.allModels': 'All models',
-      'usage.empty': 'No usage was recorded in this window.',
-      'usage.limit': 'Figures come from local session logs, so only sessions kept on this machine are counted.',
+      'fav.search': 'Filter by name or description',
+      'fav.summary': 'plugins',
+      'fav.loadFailed': 'Reading favourites failed',
+      'fav.none': 'Nothing is pinned yet. Use Sync to fix the plugins this profile runs into this list.',
+      'fav.capture': 'Sync current plugins',
+      'fav.capturing': 'Syncing…',
+      'fav.captured': 'Pinned {{n}} plugins',
+      'fav.captureHint': 'Sync writes the plugins this profile has enabled (the rows DSH itself ships are left out) into favorites.json inside this plugin. A pin records only the package name, and installing takes whatever the registry publishes as latest; a new machine only needs this workbench: the list comes with it, and one click installs them back.',
+      'fav.install': 'Install',
+      'fav.installing': 'Installing…',
+      'fav.installed': 'Installed',
+      'fav.alreadyInstalled': 'Already installed',
+      'fav.repaired': 'Reinstalled over the unreadable copy',
+      'fav.failed': 'Install failed',
+      'fav.installAll': 'Install all',
+      'fav.installingAll': 'Installing…',
+      'fav.allDone': 'Install all finished: {{ok}} installed, {{bad}} failed',
+      'fav.stateInstalled': 'Installed',
+      'fav.stateMissing': 'Files missing',
+      'fav.stateAbsent': 'Not installed',
+      'fav.source': 'Install source',
+      'fav.capturedAt': 'Pinned {{at}}',
+      'fav.file': 'File',
+      'fav.pending': '{{n}} to install',
     };
 
     /** Text for a thrown value. */
@@ -233,7 +237,6 @@ window.__ModuleLoader__.load({
       '.wb-spacer{flex:1 1 auto}',
       '.wb-input{min-height:34px;min-width:220px;padding:0 12px;border-radius:9px;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface);color:inherit;font:inherit;font-size:13px}',
       '.wb-input:focus{outline:1px solid var(--dsw-alias-brand-primary);outline-offset:-1px}',
-      '.wb-select{min-width:170px;max-width:260px;padding:0 8px}',
       '.wb-cwd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.wb-btn{appearance:none;font:inherit;font-size:13px;padding:7px 14px;border-radius:9px;cursor:pointer;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface);color:var(--dsw-alias-label-primary)}',
       '.wb-btn:hover{border-color:var(--dsw-alias-border-l2)}',
@@ -268,6 +271,8 @@ window.__ModuleLoader__.load({
       '.wb-row{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface);cursor:pointer;font:inherit;color:inherit}',
       '.wb-row:hover{border-color:var(--dsw-alias-border-l2)}',
       '.wb-row:focus-visible{outline:1px solid var(--dsw-alias-brand-primary);outline-offset:2px}',
+      '.wb-row.wb-static{cursor:default}',
+      '.wb-row.wb-static:hover{border-color:var(--dsw-alias-border-l1)}',
       '.wb-row-main{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1 1 auto}',
       '.wb-row-desc{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
       '.wb-row-action{flex:none;white-space:nowrap}',
@@ -276,23 +281,6 @@ window.__ModuleLoader__.load({
       '.wb-detail h2{margin:0;font-size:16px;font-weight:600}',
       '.wb-section-label{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dsw-alias-label-secondary)}',
       '.wb-empty{padding:28px 16px;text-align:center;font-size:13px;color:var(--dsw-alias-label-secondary);border:1px dashed var(--dsw-alias-border-l1);border-radius:12px}',
-      '.wb-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}',
-      '.wb-stat{display:flex;flex-direction:column;gap:4px;padding:13px 15px;border-radius:12px;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface)}',
-      '.wb-stat-value{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}',
-      '.wb-stat-label{font-size:11px;color:var(--dsw-alias-label-secondary)}',
-      '.wb-chart{display:flex;align-items:flex-end;gap:3px;height:150px;padding:12px;border-radius:12px;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface)}',
-      '.wb-chart-col{flex:1 1 0;min-width:2px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}',
-      '.wb-chart-bar{width:100%;min-height:2px;border-radius:3px 3px 0 0;background:var(--dsw-alias-brand-primary);opacity:.85}',
-      '.wb-chart-col:hover .wb-chart-bar{opacity:1}',
-      '.wb-chart-label{font-size:10px;line-height:1;color:var(--dsw-alias-label-secondary);white-space:nowrap}',
-      '.wb-table-wrap{border-radius:12px;border:1px solid var(--dsw-alias-border-l1);background:var(--wb-surface);overflow:hidden}',
-      '.wb-table{width:100%;border-collapse:collapse;font-size:12px}',
-      '.wb-table th{padding:9px 12px;text-align:right;font-weight:600;color:var(--dsw-alias-label-secondary);border-bottom:1px solid var(--dsw-alias-border-l1);background:transparent;white-space:nowrap}',
-      '.wb-table td{padding:8px 12px;text-align:right;border-bottom:1px solid var(--dsw-alias-border-l1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary)}',
-      '.wb-table th:first-child,.wb-table td:first-child{text-align:left}',
-      '.wb-table tr:last-child td{border-bottom:0}',
-      '.wb-btn[aria-pressed="true"]{background:var(--wb-well);font-weight:600;box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1)}',
-      '.wb-range{display:inline-flex;gap:6px}',
     ].join('\n');
 
     /** A labeled on/off control. */
@@ -637,230 +625,231 @@ window.__ModuleLoader__.load({
         body);
     }
 
-    /** Compact token count: 1.24M, 31.4K, 907. */
-    function formatTokens(value) {
-      var count = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-      if (count >= 1e9) return (count / 1e9).toFixed(2) + 'B';
-      if (count >= 1e6) return (count / 1e6).toFixed(2) + 'M';
-      if (count >= 1e4) return (count / 1e3).toFixed(1) + 'K';
-      if (count >= 1e3) return (count / 1e3).toFixed(2) + 'K';
-      return String(Math.round(count));
+    /** One line describing what an install click did. */
+    function installText(result, t) {
+      var value = result || {};
+      var change = value.change || {};
+      var head = value.status === 'already-installed' ? t('fav.alreadyInstalled') : t('fav.installed');
+      if (value.status === 'failed') head = t('fav.failed');
+      var parts = [head, String(value.name || value.spec || '')];
+      if (typeof change.application === 'string' && change.application !== '') {
+        parts.push(t('application.' + change.application));
+      }
+      if (value.repaired === true) parts.push(t('fav.repaired'));
+      if (typeof change.diagnostic === 'string' && change.diagnostic !== '') parts.push(change.diagnostic);
+      return parts.join(' · ');
     }
 
-    function formatPercent(value) {
-      var ratio = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-      return (ratio * 100).toFixed(1) + '%';
+    /** Fill one counted sentence: the only placeholders used here are {{n}}, {{ok}} and {{bad}}. */
+    function fill(template, values) {
+      var text = template;
+      Object.keys(values).forEach(function (key) {
+        text = text.split('{{' + key + '}}').join(String(values[key]));
+      });
+      return text;
     }
 
-    /** `2026-11-04` -> `11-04`. */
-    function shortDay(date) {
-      return typeof date === 'string' && date.length >= 10 ? date.slice(5) : String(date);
+    /** "2026-11-11T03:04:05.000Z" -> the browser's own date and time. */
+    function stampText(iso) {
+      if (typeof iso !== 'string' || iso === '') return '';
+      var when = new Date(iso);
+      if (isNaN(when.getTime())) return iso;
+      return when.toLocaleString();
     }
 
-    /** Total tokens of one bucket: uncached input, output, and reasoning. */
-    function bucketTotal(day) {
-      if (day === null || typeof day !== 'object') return 0;
-      if (typeof day.total === 'number') return day.total;
-      return (day.input || 0) + (day.output || 0) + (day.reasoning || 0);
-    }
-
-    /** The same total with the cached prompt read back in. */
-    function bucketTotalWithCache(day) {
-      if (day === null || typeof day !== 'object') return 0;
-      if (typeof day.totalWithCache === 'number') return day.totalWithCache;
-      return bucketTotal(day) + (day.cacheRead || 0) + (day.cacheWrite || 0);
-    }
-
-    /** One headline figure. */
-    function Stat(props) {
-      return h('div', { className: 'wb-stat' },
-        h('span', { className: 'wb-stat-value' }, props.value),
-        h('span', { className: 'wb-stat-label' }, props.label));
-    }
-
-    var USAGE_RANGES = [7, 30, 90];
-
-    /** Daily token usage folded from the local session logs. */
-    function UsageModule(props) {
+    /**
+     * Favourites module: a pinned list of the plugins this profile runs, each
+     * installable from the spec a new machine can actually resolve.
+     */
+    function FavoritesModule(props) {
       var t = props.t;
-      var rangeHook = useState(7);
-      var range = rangeHook[0];
-      var setRange = rangeHook[1];
-      var modelHook = useState('');
-      var model = modelHook[0];
-      var setModel = modelHook[1];
       var stateHook = useState({ phase: 'loading' });
       var state = stateHook[0];
       var setState = stateHook[1];
-      var attempts = React.useRef(0);
+      var queryHook = useState('');
+      var query = queryHook[0];
+      var setQuery = queryHook[1];
+      var busyHook = useState('');
+      var busy = busyHook[0];
+      var setBusy = busyHook[1];
+      var noticeHook = useState(null);
+      var notice = noticeHook[0];
+      var setNotice = noticeHook[1];
 
       var load = useCallback(async function () {
+        setState({ phase: 'loading' });
         try {
-          var query = '/usage?days=' + String(range) + (model === '' ? '' : '&model=' + encodeURIComponent(model));
-          var data = await api(query);
-          setState({ phase: 'ready', data: data });
+          var data = await api('/favorites');
+          setState({
+            phase: 'ready',
+            plugins: data.plugins || [],
+            capturedAt: data.capturedAt || '',
+            filePath: data.filePath || '',
+            pending: typeof data.pending === 'number' ? data.pending : 0,
+            problems: data.problems || [],
+          });
         } catch (error) {
           setState({ phase: 'error', error: messageOf(error) });
         }
-      }, [range, model]);
+      }, []);
 
-      useEffect(function () {
-        attempts.current = 0;
-        setState({ phase: 'loading' });
-        load();
-      }, [load]);
+      useEffect(function () { load(); }, [load]);
 
-      var data = state.phase === 'ready' ? state.data : null;
-      var models = data !== null && data.models !== undefined ? data.models : [];
-      var pending = data !== null && data.scan !== undefined ? data.scan.pending : 0;
+      var capture = useCallback(async function () {
+        setBusy('#capture');
+        setNotice(null);
+        try {
+          var data = await api('/favorites', { method: 'POST', body: JSON.stringify({ action: 'capture' }) });
+          setNotice({ tone: 'success', text: fill(t('fav.captured'), { n: data.count }) });
+          await load();
+        } catch (error) {
+          setNotice({ tone: 'error', text: messageOf(error) });
+        } finally {
+          setBusy('');
+        }
+      }, [load, t]);
 
-      // A model that produced nothing in this window drops out of the roster;
-      // fall back to the unfiltered view instead of showing an empty panel.
-      useEffect(function () {
-        if (data === null || model === '') return;
-        var known = models.some(function (entry) { return entry.id === model; });
-        if (!known) setModel('');
-      }, [data, model, models]);
+      var install = useCallback(async function (plugin) {
+        setBusy(plugin.name);
+        setNotice(null);
+        try {
+          var data = await api('/favorites', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'install', name: plugin.name }),
+          });
+          setNotice({ tone: data.status === 'failed' ? 'error' : 'success', text: installText(data, t) });
+          await load();
+        } catch (error) {
+          setNotice({ tone: 'error', text: messageOf(error) });
+        } finally {
+          setBusy('');
+        }
+      }, [load, t]);
 
-      // A long window is folded in bounded slices; keep asking until it is done.
-      useEffect(function () {
-        if (pending <= 0 || attempts.current >= 30) return undefined;
-        attempts.current += 1;
-        var timer = setTimeout(function () { load(); }, 500);
-        return function () { clearTimeout(timer); };
-      }, [pending, state, load]);
+      var installAll = useCallback(async function () {
+        setBusy('#all');
+        setNotice(null);
+        try {
+          var data = await api('/favorites', { method: 'POST', body: JSON.stringify({ action: 'install-all' }) });
+          setNotice({
+            tone: data.failed > 0 ? 'error' : 'success',
+            text: fill(t('fav.allDone'), { ok: data.installed, bad: data.failed }) +
+              (data.failed > 0
+                ? ' · ' + (data.results || []).filter(function (entry) { return entry.ok !== true; })
+                  .map(function (entry) { return entry.name + (entry.detail ? '：' + entry.detail : ''); })
+                  .join(' / ')
+                : ''),
+          });
+          await load();
+        } catch (error) {
+          setNotice({ tone: 'error', text: messageOf(error) });
+        } finally {
+          setBusy('');
+        }
+      }, [load, t]);
 
-      var rangeLabel = function (days) { return t('usage.window').replace('{{n}}', String(days)); };
+      var plugins = state.plugins || [];
+      var pending = state.pending || 0;
+      var shown = useMemo(function () {
+        var needle = query.trim().toLowerCase();
+        if (needle === '') return plugins;
+        return plugins.filter(function (plugin) {
+          return plugin.name.toLowerCase().indexOf(needle) >= 0 ||
+            (plugin.title || '').toLowerCase().indexOf(needle) >= 0 ||
+            (plugin.description || '').toLowerCase().indexOf(needle) >= 0 ||
+            (plugin.installSpec || '').toLowerCase().indexOf(needle) >= 0;
+        });
+      }, [plugins, query]);
 
-      // Same model name can come from two providers, so those options carry it.
-      var nameUse = {};
-      models.forEach(function (entry) {
-        nameUse[entry.model] = (nameUse[entry.model] || 0) + 1;
-      });
-
-      var bar = h('div', { className: 'wb-bar', key: 'bar' },
-        h('div', { className: 'wb-range' }, USAGE_RANGES.map(function (days) {
-          return h('button', {
-            key: String(days),
-            type: 'button',
-            className: 'wb-btn',
-            'aria-pressed': range === days,
-            onClick: function () { setRange(days); },
-          }, rangeLabel(days));
-        })),
-        models.length > 1
-          ? h('select', {
-            className: 'wb-input wb-select',
-            value: model,
-            'aria-label': t('usage.model'),
-            title: t('usage.modelHint'),
-            onChange: function (event) { setModel(event.target.value); },
-          }, [h('option', { key: '', value: '' }, t('usage.allModels'))].concat(models.map(function (entry) {
-            var label = nameUse[entry.model] > 1 ? entry.model + ' (' + entry.provider + ')' : entry.model;
-            return h('option', { key: entry.id, value: entry.id, title: entry.id }, label);
-          })))
-          : null,
+      var header = h('div', { className: 'wb-bar', key: 'bar' },
+        h('span', { className: 'wb-count' },
+          String(plugins.length) + ' ' + t('fav.summary') +
+            (state.capturedAt ? ' · ' + fill(t('fav.capturedAt'), { at: stampText(state.capturedAt) }) : '') +
+            (pending > 0 ? ' · ' + fill(t('fav.pending'), { n: pending }) : '')),
         h('span', { className: 'wb-spacer' }),
+        h('input', {
+          className: 'wb-input',
+          type: 'search',
+          value: query,
+          placeholder: t('fav.search'),
+          'aria-label': t('fav.search'),
+          onChange: function (event) { setQuery(event.target.value); },
+        }),
         h('button', {
           type: 'button',
           className: 'wb-btn',
-          disabled: state.phase === 'loading',
+          disabled: busy !== '',
+          title: t('fav.captureHint'),
+          onClick: function () { capture(); },
+        }, busy === '#capture' ? t('fav.capturing') : t('fav.capture')),
+        h('button', {
+          type: 'button',
+          className: 'wb-btn wb-primary',
+          disabled: busy !== '' || pending === 0,
+          onClick: function () { installAll(); },
+        }, busy === '#all' ? t('fav.installingAll') : t('fav.installAll')),
+        h('button', {
+          type: 'button',
+          className: 'wb-btn',
+          disabled: state.phase === 'loading' || busy !== '',
           onClick: function () { load(); },
         }, t('common.refresh')));
 
-      var cards = null;
-      var chart = null;
-      var table = null;
-      if (data !== null) {
-        cards = h('div', { className: 'wb-cards', key: 'cards' },
-          h(Stat, { label: t('usage.today'), value: formatTokens(bucketTotal(data.today)) }),
-          h(Stat, { label: rangeLabel(data.range.days) + ' · ' + t('usage.total'), value: formatTokens(bucketTotal(data.totals)) }),
-          h(Stat, { label: rangeLabel(data.range.days) + ' · ' + t('usage.totalIncl'), value: formatTokens(bucketTotalWithCache(data.totals)) }),
-          h(Stat, { label: t('usage.hitRate'), value: formatPercent(data.totals.hitRate) }),
-          h(Stat, { label: t('usage.sessions'), value: String(data.totals.sessions) }));
-
-        var peak = 0;
-        data.days.forEach(function (day) {
-          var value = bucketTotal(day);
-          if (value > peak) peak = value;
-        });
-        var step = Math.max(1, Math.ceil(data.days.length / 12));
-        chart = h('div', { className: 'wb-chart', key: 'chart' }, data.days.map(function (day, index) {
-          var value = bucketTotal(day);
-          var height = peak > 0 ? Math.max(2, Math.round((value / peak) * 100)) : 2;
-          var title = [
-            day.date,
-            t('usage.total') + ' ' + formatTokens(value),
-            t('usage.totalIncl') + ' ' + formatTokens(bucketTotalWithCache(day)),
-            t('usage.input') + ' ' + formatTokens(day.input),
-            t('usage.output') + ' ' + formatTokens(day.output),
-            t('usage.cacheRead') + ' ' + formatTokens(day.cacheRead),
-            t('usage.sessions') + ' ' + String(day.sessions),
-          ].join(' · ');
-          return h('div', { className: 'wb-chart-col', key: day.date, title: title },
-            h('div', { className: 'wb-chart-bar', style: { height: height + '%' } }),
-            h('span', { className: 'wb-chart-label' }, index % step === 0 ? shortDay(day.date) : ''));
-        }));
-
-        var rows = data.days.slice().reverse();
-        table = h('div', { className: 'wb-table-wrap', key: 'table' },
-          h('table', { className: 'wb-table' },
-            h('thead', null,
-              h('tr', null,
-                h('th', null, t('usage.date')),
-                h('th', null, t('usage.input')),
-                h('th', null, t('usage.output')),
-                h('th', null, t('usage.cacheRead')),
-                h('th', null, t('usage.reasoning')),
-                h('th', null, t('usage.total')),
-                h('th', null, t('usage.totalIncl')),
-                h('th', null, t('usage.hitRate')),
-                h('th', null, t('usage.messages')),
-                h('th', null, t('usage.sessions')))),
-            h('tbody', null, rows.map(function (day) {
-              var promptTokens = (day.input || 0) + (day.cacheRead || 0);
-              var hit = promptTokens > 0 ? day.cacheRead / promptTokens : 0;
-              return h('tr', { key: day.date },
-                h('td', null, day.date),
-                h('td', null, formatTokens(day.input)),
-                h('td', null, formatTokens(day.output)),
-                h('td', null, formatTokens(day.cacheRead)),
-                h('td', null, formatTokens(day.reasoning)),
-                h('td', null, formatTokens(bucketTotal(day))),
-                h('td', null, formatTokens(bucketTotalWithCache(day))),
-                h('td', null, formatPercent(hit)),
-                h('td', null, String(day.messages)),
-                h('td', null, String(day.sessions)));
-            }))));
-      }
-
-      var body = null;
-      if (state.phase === 'loading' && data === null) {
+      var body;
+      if (state.phase === 'loading') {
         body = h('p', { className: 'wb-note', key: 'loading' }, t('common.loading'));
       } else if (state.phase === 'error') {
         body = h('div', { key: 'error' },
-          h('p', { className: 'wb-note is-error' }, t('usage.loadFailed') + '：' + state.error),
+          h('p', { className: 'wb-note is-error' }, t('fav.loadFailed') + '：' + state.error),
           h('button', { type: 'button', className: 'wb-btn', onClick: function () { load(); } }, t('common.retry')));
-      } else if (data !== null && pending <= 0 && (data.totals.messages || 0) === 0) {
-        body = h('div', { className: 'wb-empty', key: 'empty' }, t('usage.empty'));
+      } else if (shown.length === 0) {
+        body = h('div', { className: 'wb-empty', key: 'empty' },
+          plugins.length === 0 ? t('fav.none') : t('common.empty'));
+      } else {
+        body = h('div', { className: 'wb-list', key: 'list' }, shown.map(function (plugin) {
+          var ready = plugin.action === 'installed';
+          var tone = ready ? 'success' : (plugin.availability === 'missing' ? 'error' : 'idle');
+          var stateText = ready ? t('fav.stateInstalled')
+            : (plugin.availability === 'missing' ? t('fav.stateMissing') : t('fav.stateAbsent'));
+          return h('div', { className: 'wb-row wb-static', key: plugin.name },
+            h('div', { className: 'wb-row-main' },
+              h('div', { className: 'wb-card-title' },
+                h('span', { className: 'wb-name' }, plugin.title || plugin.name),
+                plugin.title !== '' && plugin.title !== plugin.name
+                  ? h('span', { className: 'wb-sub' }, plugin.name)
+                  : null,
+                plugin.currentVersion !== '' ? h(Badge, null, plugin.currentVersion) : null,
+                h(Badge, { tone: tone, dot: true }, stateText)),
+              plugin.description !== ''
+                ? h('span', { className: 'wb-row-desc' }, plugin.description)
+                : null,
+              h('span', { className: 'wb-sub' }, t('fav.source') + '：' + plugin.installSpec)),
+            h('div', { className: 'wb-side' },
+              h('button', {
+                type: 'button',
+                className: 'wb-btn' + (ready ? '' : ' wb-primary'),
+                disabled: busy !== '' || ready,
+                title: plugin.installSpec,
+                onClick: function () { install(plugin); },
+              }, busy === plugin.name ? t('fav.installing') : (ready ? t('fav.stateInstalled') : t('fav.install')))));
+        }));
       }
 
       return h('div', { className: 'wb-body' },
-        bar,
-        pending > 0
-          ? h('p', { className: 'wb-note', role: 'status' }, t('usage.scanning') + '… ' + t('usage.pendingFiles') + ' ' + String(pending))
+        header,
+        notice
+          ? h('p', { className: 'wb-note is-' + notice.tone, role: 'status' }, notice.text)
           : null,
-        body,
-        cards,
-        chart,
-        table,
-        data !== null && (data.problems || []).length > 0
-          ? h('div', { key: 'problems' }, data.problems.map(function (problem, index) {
+        state.phase === 'ready' && (state.problems || []).length > 0
+          ? h('div', { key: 'problems' }, state.problems.map(function (problem, index) {
             return h('p', { className: 'wb-note is-warn', key: String(index) }, problem);
           }))
           : null,
-        h('p', { className: 'wb-note', key: 'note' }, t('usage.note')),
-        h('p', { className: 'wb-note', key: 'limit' }, t('usage.limit')));
+        body,
+        state.phase === 'ready' && state.filePath !== ''
+          ? h('p', { className: 'wb-note wb-cwd', key: 'file', title: state.filePath }, t('fav.file') + '：' + state.filePath)
+          : null,
+        h('p', { className: 'wb-note', key: 'hint' }, t('fav.captureHint')));
     }
 
     /**
@@ -868,7 +857,7 @@ window.__ModuleLoader__.load({
      * Adding a module means adding an entry here and a Host route.
      */
     var MODULES = [
-      { id: 'usage', label: 'tab.usage', component: UsageModule },
+      { id: 'favorites', label: 'tab.favorites', component: FavoritesModule },
       { id: 'mcp', label: 'tab.mcp', component: McpModule },
       { id: 'skills', label: 'tab.skills', component: SkillsModule },
     ];
