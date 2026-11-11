@@ -56,14 +56,36 @@ DSH 安装自带的 bundle（新机器上本来就有，不用再装），以及
 
 ## 安装
 
-在 DSH 会话里执行（`target` 填本目录的绝对路径）：
+三种装法效果一样，都会把 `my-workbench` 这一行插进 profile：
 
-```
-plugin_manager action=install_bundle target=<本目录绝对路径>
-```
+- **从 npm**（发给别人用这个）：
+  ```
+  plugin_manager action=install_bundle target=dsh-my-workbench
+  ```
+  也可以在插件页 / 插件市场里搜 `dsh-my-workbench`。
+- **本地目录**：
+  ```
+  plugin_manager action=install_bundle target=<本目录绝对路径>
+  ```
+- **手改 profile**：`dependencies` 加 `"dsh-my-workbench": "^1.0.0"`，`dsh.profile.bundles` 里追加 `"dsh-my-workbench"`。
 
-插件自带的 `cordis.patch.yml` 会插入 `my-workbench` 这一行，profile 不需要再单独写补丁。
 以目录链接方式安装时，改完源码把插件「关 → 开」一下（或重启 Harness）就会加载新代码。
+
+## 发布到 npm
+
+```bash
+npm run check        # node --check index.js && node --check client.js
+npm pack --dry-run   # 看包里有什么：10 个文件、约 26 kB
+npm publish          # prepublishOnly 会先跑一次 check
+```
+
+- 包名 `dsh-my-workbench` 在 npm 上还没被占。
+- `engines.dsh` 写成 `>=0.2.0-rc.1 || >=0.2.1-rc.1 || >=0.2.2-rc.1`：semver 规定预发布版本只匹配「同一版本元组」的预发布区间，
+  所以逐段列出，0.2.0-rc.1 / 0.2.1-x / 0.2.2-x 全系列都能装，0.1.7 会被拦下。
+- 包里带上了 `favorites.json`，也就是**发布者自己的**插件清单。自用换机没问题；想让别的用户从空白开始，
+  发布前把 `favorites.json` 改成 `{ "version": 1, "capturedAt": "", "plugins": [] }` 即可。
+- 没有构建步骤：`index.js` 是 Host 半边（ESM），`client.js` 是浏览器端 `window.__ModuleLoader__` 格式，
+  装完即可用，`files` 白名单保证只发布这 10 个文件。
 
 ## 几处细节
 

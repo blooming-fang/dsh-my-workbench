@@ -1,23 +1,61 @@
 {
   "name": "dsh-my-workbench",
   "version": "1.0.0",
-  "private": true,
+  "description": "DeepSeek Harness left-sidebar workbench: pin the plugins this profile runs into favorites.json and put them back with one click on a new machine, next to the MCP servers and skill folder you actually use.",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "bundle",
+    "workbench",
+    "sidebar",
+    "panel",
+    "favorites",
+    "plugins",
+    "mcp",
+    "skills"
+  ],
+  "license": "MIT",
+  "author": "blooming-fang",
   "type": "module",
-  "description": "My Workbench: a left-sidebar workspace for favourite plugins, MCP servers, and skills.",
+  "icon": "icon.svg",
+  "main": "index.js",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
+    "./icon": "./icon.svg",
     "./locale/*.json": "./locale/*.json",
-    "./icon": "./icon.svg"
+    "./package.json": "./package.json"
   },
   "files": [
-    "favorites.json",
     "index.js",
     "client.js",
+    "favorites.json",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg"
   ],
+  "engines": {
+    "node": ">=22.19.0",
+    "dsh": ">=0.2.0-rc.1 || >=0.2.1-rc.1 || >=0.2.2-rc.1"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check client.js",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run check"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blooming-fang/dsh-my-workbench.git"
+  },
+  "homepage": "https://github.com/blooming-fang/dsh-my-workbench#readme",
+  "bugs": {
+    "url": "https://github.com/blooming-fang/dsh-my-workbench/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
